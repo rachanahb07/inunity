@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard - CAMPUSCONNECT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #475569;
+            --accent: #10b981;
+            --light: #f8fafc;
+            --border: #e2e8f0;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        body {
+            background: var(--light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar-custom {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .navbar-custom h1 {
+            color: var(--primary);
+            margin: 0;
+            font-weight: 700;
+        }
+        
+        .status-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .status-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+        
+        .status-btn.free {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-btn.free:hover {
+            background: #a7f3d0;
+        }
+        
+        .status-btn.busy {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .status-btn.busy:hover {
+            background: #fecaca;
+        }
+        
+        .status-btn.away {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-btn.away:hover {
+            background: #fde68a;
+        }
+        
+        .status-btn.in-class {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .status-btn.in-class:hover {
+            background: #bfdbfe;
+        }
+        
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+        
+        .container-main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        .tabs {
+            background: white;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+            display: flex;
+            gap: 20px;
+        }
+        
+        .tab-link {
+            color: var(--secondary);
+            text-decoration: none;
+            border-bottom: 3px solid transparent;
+            padding-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-link.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        
+        .stat-label {
+            color: var(--secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            margin: 0;
+        }
+        
+        .stat-value {
+            color: var(--primary);
+            font-size: 28px;
+            font-weight: 700;
+            margin: 10px 0 0 0;
+        }
+        
+        .profile-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .form-control {
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+        
+        .form-control:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        
+        .btn-primary-custom {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary-custom:hover {
+            background: #059669;
+        }
+        
+        .booking-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid var(--accent);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .booking-info {
+            flex: 1;
+        }
+        
+        .booking-lab {
+            color: var(--primary);
+            font-weight: 700;
+            margin: 0 0 10px 0;
+        }
+        
+        .booking-time {
+            color: var(--secondary);
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        
+        .booking-status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-confirmed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-engaged {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .btn-confirm {
+            background: var(--warning);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        
+        .btn-confirm:hover {
+            background: #d97706;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            z-index: 9999;
+            max-width: 400px;
+            animation: slideInRight 0.3s ease;
+        }
+        
+        .notification.warning {
+            border-left: 4px solid var(--warning);
+        }
+        
+        .notification.started {
+            border-left: 4px solid var(--primary);
+        }
+        
+        .notification-title {
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        
+        .notification-message {
+            color: var(--secondary);
+            font-size: 14px;
+        }
+        
+        .notification-timer {
+            margin-top: 15px;
+            font-weight: 600;
+            color: var(--warning);
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal-form {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-form.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- NAVBAR -->
+    <div class="navbar-custom">
+        <div>
+            <h1>👨‍🏫 Teacher Dashboard</h1>
+            <small style="color: var(--secondary);">Welcome, {{ session['full_name'] }}!</small>
+        </div>
+        <div class="status-controls">
+            <span style="color: var(--secondary); margin-right: 20px;">Status:</span>
+            <button class="status-btn free" onclick="updateStatus('free')">🟢 Free</button>
+            <button class="status-btn busy" onclick="updateStatus('busy')">🔴 Busy</button>
+            <button class="status-btn away" onclick="updateStatus('away')">🟡 Away</button>
+            <button class="status-btn in-class" onclick="updateStatus('in_class')">🔵 In Class</button>
+            <span style="margin-left: 30px; color: var(--secondary); margin-right: 20px;" id="message-badge">
+                💬 <strong id="unread-count">{{ unread_messages }}</strong> Messages
+            </span>
+            <a href="/logout" class="logout-btn">🚪 Logout</a>
+        </div>
+    </div>
+    
+    <!-- MAIN CONTENT -->
+    <div class="container-main">
+        <!-- TABS -->
+        <div class="tabs">
+            <a href="javascript:switchTab('overview')" class="tab-link active">📊 Overview</a>
+            <a href="javascript:switchTab('profile')" class="tab-link">👤 Profile</a>
+            <a href="javascript:switchTab('bookings')" class="tab-link">📅 Book Lab</a>
+            <a href="javascript:switchTab('interactive')" class="tab-link">📺 Book Interactive</a>
+            <a href="javascript:switchTab('mybookings')" class="tab-link">📋 My Bookings</a>
+            <a href="javascript:switchTab('messages')" class="tab-link">💬 Messages</a>
+        </div>
+        
+        <!-- OVERVIEW TAB -->
+        <div id="overview" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <p class="stat-label">⏳ Pending Bookings</p>
+                    <p class="stat-value" id="pending-count">{{ pending_bookings }}</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">⏰ Unread Messages</p>
+                    <p class="stat-value" id="message-count">{{ unread_messages }}</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">✅ Confirmed Bookings</p>
+                    <p class="stat-value">0</p>
+                </div>
+            </div>
+            <div id="notification-area"></div>
+        </div>
+        
+        <!-- PROFILE TAB -->
+        <div id="profile" class="tab-content hidden">
+            <div class="profile-card">
+                <h5 style="color: var(--primary); margin-bottom: 20px;">📝 Update Your Profile</h5>
+                <form id="profile-form">
+                    <div class="form-group">
+                        <label class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="profile-subject" placeholder="e.g., Data Structures, AI/ML">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Department</label>
+                        <input type="text" class="form-control" id="profile-department" placeholder="e.g., CSE, ECE">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cabin Location</label>
+                        <input type="text" class="form-control" id="profile-location" placeholder="e.g., Block A, Floor 2, Room 201">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Timetable (JSON format)</label>
+                        <textarea class="form-control" id="profile-timetable" rows="4" placeholder="Enter your timetable..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary-custom">💾 Save Changes</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- BOOK LAB TAB -->
+        <div id="bookings" class="tab-content hidden">
+            <div class="profile-card">
+                <h5 style="color: var(--primary); margin-bottom: 20px;">🧪 Book a Lab</h5>
+                <form id="booking-form">
+                    <div class="form-group">
+                        <label class="form-label">Select Lab</label>
+                        <select class="form-control" id="lab-select" required>
+                            <option>Loading...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Booking Date</label>
+                        <input type="date" class="form-control" id="booking-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Booking Time</label>
+                        <input type="time" class="form-control" id="booking-time" required>
+                    </div>
+                    <button type="submit" class="btn-primary-custom">📅 Book Lab</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- BOOK INTERACTIVE TAB -->
+        <div id="interactive" class="tab-content hidden">
+            <div class="profile-card">
+                <h5 style="color: var(--primary); margin-bottom: 20px;">📺 Book an Interactive Class</h5>
+                <form id="interactive-booking-form">
+                    <div class="form-group">
+                        <label class="form-label">Select Interactive Class</label>
+                        <select class="form-control" id="interactive-select" required>
+                            <option>Loading...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Booking Date</label>
+                        <input type="date" class="form-control" id="interactive-booking-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Booking Time</label>
+                        <input type="time" class="form-control" id="interactive-booking-time" required>
+                    </div>
+                    <button type="submit" class="btn-primary-custom">📅 Book Interactive Class</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- MY BOOKINGS TAB -->
+        <div id="mybookings" class="tab-content hidden">
+            <h5 style="color: var(--primary); margin-bottom: 20px;">📋 Your Bookings</h5>
+            <div id="bookings-list"></div>
+            <h5 style="color: var(--primary); margin: 30px 0 15px 0;">📺 Your Interactive Class Bookings</h5>
+            <div id="interactive-bookings-list"></div>
+        </div>
+        
+        <!-- MESSAGES TAB -->
+        <div id="messages" class="tab-content hidden">
+            <h5 style="color: var(--primary); margin-bottom: 20px;">💬 Student Messages</h5>
+            <div id="messages-list"></div>
+        </div>
+    </div>
+    
+    <!-- NOTIFICATION MODAL -->
+    <div id="booking-notification" class="notification hidden" style="display: none;">
+        <div class="notification-title">🔔 Lab Class Alert</div>
+        <div class="notification-message" id="notification-message"></div>
+        <div class="notification-timer" id="notification-timer"></div>
+        <button class="btn-confirm" onclick="confirmBooking()" style="width: 100%; margin-top: 15px;">✓ Confirm & Engage</button>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentBookingId = null;
+        let confirmationTimer = null;
+        
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabName).classList.remove('hidden');
+            document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (tabName === 'bookings') loadLabsForBooking();
+            if (tabName === 'interactive') loadInteractiveClasses();
+            if (tabName === 'mybookings') {
+                loadMyBookings();
+                loadTeacherInteractiveBookings();
+            }
+            if (tabName === 'messages') loadMessages();
+            if (tabName === 'profile') loadProfile();
+        }
+        
+        // Update Status
+        async function updateStatus(status) {
+            try {
+                const response = await fetch('/api/teacher/status', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                if (response.ok) {
+                    console.log('Status updated to:', status);
+                    document.querySelectorAll('.status-btn').forEach(btn => {
+                        btn.style.opacity = btn.className.includes(status.replace('_', '-')) ? '1' : '0.6';
+                    });
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        
+        // Load Labs for Booking
+        async function loadLabsForBooking() {
+            try {
+                const response = await fetch('/api/student/labs');
+                const labs = await response.json();
+                const select = document.getElementById('lab-select');
+                select.innerHTML = '<option value="">-- Select a Lab --</option>' + 
+                    labs.map(l => `<option value="${l.id}">${l.name} (${l.location})</option>`).join('');
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function loadInteractiveClasses() {
+            try {
+                const response = await fetch('/api/student/interactive-classes');
+                const classes = await response.json();
+                const select = document.getElementById('interactive-select');
+                select.innerHTML = '<option value="">-- Select a Class --</option>' + 
+                    classes.map(c => `<option value="${c.id}">${c.name} (${c.location})</option>`).join('');
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        
+        // Book Lab
+        document.getElementById('booking-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch('/api/teacher/book-lab', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        lab_id: parseInt(document.getElementById('lab-select').value),
+                        booking_date: document.getElementById('booking-date').value,
+                        booking_time: document.getElementById('booking-time').value
+                    })
+                });
+                if (response.ok) {
+                    alert('✅ Lab booked successfully!');
+                    document.getElementById('booking-form').reset();
+                } else {
+                    const result = await response.json();
+                    alert(result.message || 'Error booking lab');
+                }
+            } catch (error) {
+                alert('Error booking lab');
+            }
+        });
+
+        document.getElementById('interactive-booking-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch('/api/teacher/book-interactive', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        interactive_class_id: parseInt(document.getElementById('interactive-select').value),
+                        booking_date: document.getElementById('interactive-booking-date').value,
+                        booking_time: document.getElementById('interactive-booking-time').value
+                    })
+                });
+                if (response.ok) {
+                    alert('✅ Interactive class booked successfully!');
+                    document.getElementById('interactive-booking-form').reset();
+                } else {
+                    const result = await response.json();
+                    alert(result.message || 'Error booking interactive class');
+                }
+            } catch (error) {
+                alert('Error booking interactive class');
+            }
+        });
+        
+        // Load My Bookings
+        async function loadMyBookings() {
+            try {
+                const response = await fetch('/api/teacher/bookings');
+                const bookings = await response.json();
+                const html = bookings.map(b => `
+                    <div class="booking-card">
+                        <div class="booking-info">
+                            <p class="booking-lab">🧪 ${b.lab_name}</p>
+                            <p class="booking-time">📅 ${b.booking_date} at ${b.booking_time}</p>
+                            <span class="booking-status status-${b.status}">${b.status.toUpperCase()}</span>
+                        </div>
+                        <div>
+                            ${b.status === 'pending' ? `<button class="btn-confirm" onclick="confirmBookingDirect(${b.id})">Confirm Engaged</button>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('bookings-list').innerHTML = html || '<p class="text-muted">No bookings yet</p>';
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function loadTeacherInteractiveBookings() {
+            try {
+                const response = await fetch('/api/teacher/interactive-bookings');
+                const bookings = await response.json();
+                const html = bookings.map(b => `
+                    <div class="booking-card">
+                        <div class="booking-info">
+                            <p class="booking-lab">📺 ${b.class_name}</p>
+                            <p class="booking-time">📅 ${b.booking_date} at ${b.booking_time}</p>
+                            <span class="booking-status status-${b.status}">${b.status.toUpperCase()}</span>
+                        </div>
+                        <div>
+                            ${b.status === 'pending' ? `<button class="btn-confirm" onclick="confirmInteractiveBookingDirect(${b.id})">Confirm Engaged</button>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('interactive-bookings-list').innerHTML = html || '<p class="text-muted">No interactive class bookings yet</p>';
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        
+        async function confirmBookingDirect(bookingId) {
+            try {
+                const response = await fetch(`/api/teacher/confirm-booking/${bookingId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.ok) {
+                    alert('✅ Lab booking confirmed as engaged!');
+                    loadMyBookings();
+                    loadTeacherInteractiveBookings();
+                }
+            } catch (error) {
+                alert('Error confirming booking');
+            }
+        }
+
+        async function confirmInteractiveBookingDirect(bookingId) {
+            try {
+                const response = await fetch(`/api/teacher/confirm-interactive-booking/${bookingId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.ok) {
+                    alert('✅ Interactive class booking confirmed as engaged!');
+                    loadTeacherInteractiveBookings();
+                    loadMyBookings();
+                }
+            } catch (error) {
+                alert('Error confirming interactive booking');
+            }
+        }
+        
+        // Load Messages
+        async function loadMessages() {
+            try {
+                const response = await fetch('/api/teacher/messages');
+                const messages = await response.json();
+                const html = messages.map(m => `
+                    <div class="booking-card" style="border-left: 4px solid var(--primary);">
+                        <div class="booking-info">
+                            <p class="booking-lab">📬 From: ${m.sender_name}</p>
+                            <p style="color: var(--secondary); margin: 10px 0; font-weight: 600;">${m.subject}</p>
+                            <p style="color: #333; margin: 10px 0;">${m.body}</p>
+                            <small style="color: var(--secondary);">${m.created_at}</small>
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('messages-list').innerHTML = html || '<p class="text-muted">No messages yet</p>';
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        
+        // Load Profile
+        async function loadProfile() {
+            try {
+                const response = await fetch('/api/teacher/profile');
+                const profile = await response.json();
+                document.getElementById('profile-subject').value = profile.subject || '';
+                document.getElementById('profile-department').value = profile.department || '';
+                document.getElementById('profile-location').value = profile.cabin_location || '';
+                document.getElementById('profile-timetable').value = profile.timetable || '';
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        
+        // Save Profile
+        document.getElementById('profile-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch('/api/teacher/profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        subject: document.getElementById('profile-subject').value,
+                        department: document.getElementById('profile-department').value,
+                        cabin_location: document.getElementById('profile-location').value,
+                        timetable: document.getElementById('profile-timetable').value
+                    })
+                });
+                if (response.ok) {
+                    alert('✅ Profile updated successfully!');
+                }
+            } catch (error) {
+                alert('Error updating profile');
+            }
+        });
+        
+        // Booking Notification System
+        function showBookingNotification(type, message, bookingId) {
+            if (type === 'warning') {
+                showWarningNotification(message, bookingId);
+            } else if (type === 'started') {
+                showStartNotification(message, bookingId);
+            }
+        }
+        
+        function showWarningNotification(message, bookingId) {
+            const notif = document.getElementById('booking-notification');
+            notif.classList.remove('hidden');
+            notif.style.display = 'block';
+            notif.classList.add('warning');
+            document.getElementById('notification-message').textContent = message;
+            currentBookingId = bookingId;
+            
+            let timeLeft = 600; // 10 minutes
+            const timer = setInterval(() => {
+                timeLeft--;
+                const mins = Math.floor(timeLeft / 60);
+                const secs = timeLeft % 60;
+                document.getElementById('notification-timer').textContent = `Confirm in: ${mins}:${secs.toString().padStart(2, '0')}`;
+                if (timeLeft <= 0) clearInterval(timer);
+            }, 1000);
+        }
+        
+        function showStartNotification(message, bookingId) {
+            const notif = document.getElementById('booking-notification');
+            notif.classList.remove('hidden');
+            notif.style.display = 'block';
+            notif.classList.add('started');
+            document.getElementById('notification-message').textContent = message;
+            currentBookingId = bookingId;
+            
+            let timeLeft = 900; // 15 minutes
+            const timer = setInterval(() => {
+                timeLeft--;
+                const mins = Math.floor(timeLeft / 60);
+                const secs = timeLeft % 60;
+                document.getElementById('notification-timer').textContent = `Auto-cancel in: ${mins}:${secs.toString().padStart(2, '0')}`;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    notif.classList.add('hidden');
+                    notif.style.display = 'none';
+                }
+            }, 1000);
+        }
+        
+        async function confirmBooking() {
+            if (!currentBookingId) return;
+            try {
+                const response = await fetch(`/api/teacher/confirm-booking/${currentBookingId}`, {
+                    method: 'PUT'
+                });
+                if (response.ok) {
+                    document.getElementById('booking-notification').classList.add('hidden');
+                    document.getElementById('booking-notification').style.display = 'none';
+                    alert('✅ Lab booking confirmed!');
+                    loadMyBookings();
+                }
+            } catch (error) {
+                alert('Error confirming booking');
+            }
+        }
+        
+        // Simulate notifications for demo (in production, use WebSockets)
+        // Uncomment to test notifications
+        // setTimeout(() => showBookingNotification('warning', '🔔 Your lab class is about to start in 10 minutes. Please confirm the booking.', 1), 5000);
+        // setTimeout(() => showBookingNotification('started', '⏰ Your lab class has started. Please confirm the lab is engaged.', 1), 20000);
+    </script>
+</body>
+</html>
