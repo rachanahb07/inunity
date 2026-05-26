@@ -6,6 +6,10 @@ from werkzeug.utils import secure_filename
 import os
 import json
 import secrets
+import sys
+
+# Add parent directory to Python path for imports (required for Vercel deployment)
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from models import db, User, Student, Teacher, Lab, LabBooking, InteractiveClass, InteractiveClassBooking, Message, Notification, SystemLog
 import tasks
