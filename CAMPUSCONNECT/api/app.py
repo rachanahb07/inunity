@@ -1,15 +1,15 @@
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, Response
 from functools import wraps
 from datetime import datetime, timedelta, date, time
 from sqlalchemy import inspect, text, or_
 from werkzeug.utils import secure_filename
-import os
 import json
 import secrets
-import sys
-
-# Add parent directory to Python path for imports (required for Vercel deployment)
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from models import db, User, Student, Teacher, Lab, LabBooking, InteractiveClass, InteractiveClassBooking, Message, Notification, SystemLog
 import tasks

@@ -1,12 +1,12 @@
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 import json
-import sys
-import os
-
-# Add current directory to Python path (for Vercel deployment compatibility)
-sys.path.insert(0, os.path.dirname(__file__))
 
 from models import db, LabBooking, InteractiveClassBooking, Lab, InteractiveClass, SystemLog, Notification
 
