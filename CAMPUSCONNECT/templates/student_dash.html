@@ -68,8 +68,17 @@
             border: 1px solid var(--border);
             transition: all 0.3s ease;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .teacher-photo {
+            width: 100px;
+            height: 100px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 2px solid var(--border);
+            flex-shrink: 0;
         }
         
         .teacher-card:hover {
@@ -85,13 +94,39 @@
             color: var(--primary);
             font-weight: 700;
             font-size: 16px;
-            margin: 0;
+            margin: 0 0 10px 0;
         }
         
         .teacher-meta {
             color: var(--secondary);
             font-size: 13px;
-            margin: 5px 0 0 0;
+            margin: 5px 0;
+        }
+        
+        .teacher-cabin {
+            background: #f0f9ff;
+            border-left: 3px solid var(--accent);
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        
+        .cabin-row {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 8px;
+            margin: 5px 0;
+        }
+        
+        .cabin-label {
+            font-weight: 600;
+            color: var(--primary);
+            min-width: 70px;
+        }
+        
+        .cabin-value {
+            color: var(--secondary);
         }
         
         .status-badge {
@@ -300,9 +335,9 @@
     
     <!-- TABS -->
     <div class="tabs" style="max-width: 1200px; margin: 0 auto;">
-        <a href="javascript:switchTab('teachers')" class="tab-link active" onclick="this.classList.add('active'); document.querySelector('[onclick*=labs]').classList.remove('active'); document.querySelector('[onclick*=messages]').classList.remove('active');">👩‍🏫 Find Teachers</a>
-        <a href="javascript:switchTab('labs')" class="tab-link" onclick="this.classList.add('active'); document.querySelector('[onclick*=teachers]').classList.remove('active'); document.querySelector('[onclick*=messages]').classList.remove('active');">🧪 Available Labs</a>
-        <a href="javascript:switchTab('messages')" class="tab-link" onclick="this.classList.add('active'); document.querySelector('[onclick*=teachers]').classList.remove('active'); document.querySelector('[onclick*=labs]').classList.remove('active');">💬 Messages</a>
+        <a href="#" onclick="switchTab(event, 'teachers')" class="tab-link active">👩‍🏫 Find Teachers</a>
+        <a href="#" onclick="switchTab(event, 'labs')" class="tab-link">🧪 Available Labs</a>
+        <a href="#" onclick="switchTab(event, 'messages')" class="tab-link">💬 Messages</a>
     </div>
     
     <!-- TEACHERS TAB -->
@@ -350,47 +385,51 @@
             </form>
         </div>
     </div>
-    
+
+    <!-- TEACHER TIMETABLE MODAL -->
+    <div id="timetable-modal" class="modal-form">
+        <div class="modal-content">
+            <h5 style="color: var(--primary); margin-bottom: 20px;" id="timetable-teacher-name">Teacher Timetable</h5>
+            <div id="timetable-content" style="max-height: 400px; overflow-y: auto;"></div>
+            <button type="button" class="btn btn-secondary mt-2" style="width: 100%;" onclick="closeTimetableModal()">Close</button>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(tabName).classList.remove('hidden');
-            
-            if (tabName === 'teachers') loadTeachers();
-            if (tabName === 'labs') loadLabs();
-            if (tabName === 'messages') loadMessages();
-        }
+        // ===== FUNCTION DEFINITIONS (ALL FIRST) =====
         
-        // Search Teachers
-        document.getElementById('teacher-search').addEventListener('input', async (e) => {
-            const query = e.target.value.trim();
-            if (query.length < 2) {
-                document.getElementById('teachers-list').innerHTML = '';
-                return;
-            }
-            
+        async function loadTeachers() {
             try {
-                const response = await fetch(`/api/student/search-teachers?q=${encodeURIComponent(query)}`);
+                const response = await fetch('/api/student/search-teachers?q=');
                 const teachers = await response.json();
-                const html = teachers.map(t => `
+                const html = teachers.length > 0 ? teachers.map(t => `
                     <div class="teacher-card">
+                        <img class="teacher-photo" src="${t.profile_photo_url || (t.profile_photo ? '/static/' + t.profile_photo : 'https://via.placeholder.com/100x100?text=' + t.full_name.split(' ')[0])}" alt="${t.full_name}">
                         <div class="teacher-info">
                             <p class="teacher-name">${t.full_name}</p>
                             <p class="teacher-meta">📚 ${t.subject || 'N/A'} | 🏢 ${t.department || 'N/A'}</p>
-                            <p class="teacher-meta">📍 ${t.cabin_location || 'Location not set'}</p>
-                            <span class="status-badge status-${t.status}">${t.status.replace('_', ' ').toUpperCase()}</span>
+                            <div class="teacher-cabin">
+                                <div style="font-weight: 700; color: var(--primary); margin-bottom: 8px;">Cabin Address</div>
+                                ${t.cabin_block ? `<div class="cabin-row"><span class="cabin-label">🏢 Block:</span><span class="cabin-value">${t.cabin_block}</span></div>` : ''}
+                                ${t.cabin_floor ? `<div class="cabin-row"><span class="cabin-label">📍 Floor:</span><span class="cabin-value">${t.cabin_floor}</span></div>` : ''}
+                                ${t.cabin_room ? `<div class="cabin-row"><span class="cabin-label">🚪 Room:</span><span class="cabin-value">${t.cabin_room}</span></div>` : ''}
+                                ${!t.cabin_block && !t.cabin_floor && !t.cabin_room ? '<span style="color: var(--secondary);">Location not set</span>' : ''}
+                            </div>
+                            <span class="status-badge status-${t.status.replace('_', '-')}">${t.status.replace('_', ' ').toUpperCase()}</span>
+                            ${t.current_class ? `<div style="margin: 8px 0 0; font-size: 13px; color: var(--secondary);">📍 Currently in ${t.current_class.resource_type === 'lab' ? 'lab' : 'interactive class'} ${t.current_class.resource_name || t.current_class.resource_location || t.current_class.location || ''}</div>` : ''}
+                            ${t.timetable ? `<button class="btn-message" style="margin-top: 10px; font-size: 12px; padding: 6px 12px;" onclick="openTimetableModal(${t.id}, '${t.full_name}', ${JSON.stringify(t.timetable).replace(/"/g, '&quot;')})">📅 View Schedule</button>` : ''}
                         </div>
                         <div class="action-buttons">
                             <button class="btn-message" onclick="openMessageModal(${t.id}, '${t.full_name}')">💬 Message</button>
                         </div>
                     </div>
-                `).join('');
-                document.getElementById('teachers-list').innerHTML = html || '<p class="text-muted">No teachers found</p>';
+                `).join('') : '<p class="text-muted">No teachers available</p>';
+                document.getElementById('teachers-list').innerHTML = html;
             } catch (error) {
                 console.error(error);
             }
-        });
+        }
         
         async function loadLabs() {
             try {
@@ -407,8 +446,6 @@
                         <div class="lab-card">
                             <p class="lab-name">🧪 ${l.name}</p>
                             <div class="lab-meta">
-                                <p>📍 ${l.location}</p>
-                                <p>👥 Capacity: ${l.capacity}</p>
                                 <p>Status: <span class="status-badge status-${l.status}">${l.status.toUpperCase()}</span></p>
                             </div>
                         </div>
@@ -417,8 +454,6 @@
                         <div class="lab-card">
                             <p class="lab-name">📺 ${c.name}</p>
                             <div class="lab-meta">
-                                <p>📍 ${c.location}</p>
-                                <p>👥 Capacity: ${c.capacity}</p>
                                 <p>Status: <span class="status-badge status-${c.status}">${c.status.toUpperCase()}</span></p>
                             </div>
                         </div>
@@ -449,6 +484,24 @@
             }
         }
         
+        function switchTab(event, tabName) {
+            event.preventDefault();
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('active');
+            });
+            const selectedTab = document.getElementById(tabName);
+            selectedTab.classList.remove('hidden');
+            selectedTab.classList.add('active');
+            document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            if (tabName === 'teachers') loadTeachers();
+            if (tabName === 'labs') loadLabs();
+            if (tabName === 'messages') loadMessages();
+        }
+        
         function openMessageModal(teacherId, teacherName) {
             document.getElementById('recipient-id').value = teacherId;
             document.querySelector('.modal-content h5').textContent = `Message to ${teacherName}`;
@@ -460,6 +513,86 @@
             document.getElementById('message-form').reset();
         }
         
+        function openTimetableModal(teacherId, teacherName, timetable) {
+            document.getElementById('timetable-teacher-name').textContent = `${teacherName}'s Schedule`;
+            const modal = document.getElementById('timetable-modal');
+            const content = document.getElementById('timetable-content');
+            
+            if (!timetable || Object.keys(timetable).length === 0) {
+                content.innerHTML = '<p class="text-muted">No timetable available</p>';
+            } else {
+                const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                let html = '<div style="font-size: 14px;">';
+                
+                days.forEach(day => {
+                    if (timetable[day] && timetable[day].length > 0) {
+                        html += `<div style="margin-bottom: 15px;">
+                            <strong style="color: var(--primary);">${day.charAt(0).toUpperCase() + day.slice(1)}</strong><br>`;
+                        timetable[day].forEach(cls => {
+                            html += `<div style="background: #f0f9ff; padding: 8px; margin: 5px 0; border-radius: 6px; border-left: 3px solid var(--accent);">
+                                <strong>${cls.subject || 'N/A'}</strong><br>
+                                <small>⏰ ${cls.start} - ${cls.end}</small><br>
+                                <small>📍 ${cls.location || 'N/A'}</small>
+                                ${cls.resource_type ? `<br><small>🏷 ${cls.resource_type === 'lab' ? 'Lab' : 'Interactive Class'}: ${cls.resource_name || cls.resource_location || cls.location}</small>` : ''}
+                            </div>`;
+                        });
+                        html += '</div>';
+                    }
+                });
+                
+                html += '</div>';
+                content.innerHTML = html;
+            }
+            
+            modal.classList.add('show');
+        }
+        
+        function closeTimetableModal() {
+            document.getElementById('timetable-modal').classList.remove('show');
+        }
+        
+        // ===== EVENT LISTENERS & PAGE INITIALIZATION =====
+        
+        // Search Teachers - live search
+        document.getElementById('teacher-search').addEventListener('input', async (e) => {
+            const query = e.target.value.trim();
+            if (query.length < 2) {
+                document.getElementById('teachers-list').innerHTML = '';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/student/search-teachers?q=${encodeURIComponent(query)}`);
+                const teachers = await response.json();
+                const html = teachers.map(t => `
+                    <div class="teacher-card">
+                        <img class="teacher-photo" src="${t.profile_photo_url || (t.profile_photo ? '/static/' + t.profile_photo : 'https://via.placeholder.com/100x100?text=' + t.full_name.split(' ')[0])}" alt="${t.full_name}">
+                        <div class="teacher-info">
+                            <p class="teacher-name">${t.full_name}</p>
+                            <p class="teacher-meta">📚 ${t.subject || 'N/A'} | 🏢 ${t.department || 'N/A'}</p>
+                            <div class="teacher-cabin">
+                                <div style="font-weight: 700; color: var(--primary); margin-bottom: 8px;">Cabin Address</div>
+                                ${t.cabin_block ? `<div class="cabin-row"><span class="cabin-label">🏢 Block:</span><span class="cabin-value">${t.cabin_block}</span></div>` : ''}
+                                ${t.cabin_floor ? `<div class="cabin-row"><span class="cabin-label">📍 Floor:</span><span class="cabin-value">${t.cabin_floor}</span></div>` : ''}
+                                ${t.cabin_room ? `<div class="cabin-row"><span class="cabin-label">🚪 Room:</span><span class="cabin-value">${t.cabin_room}</span></div>` : ''}
+                                ${!t.cabin_block && !t.cabin_floor && !t.cabin_room ? '<span style="color: var(--secondary);">Location not set</span>' : ''}
+                            </div>
+                            <span class="status-badge status-${t.status.replace('_', '-')}">${t.status.replace('_', ' ').toUpperCase()}</span>
+                            ${t.current_class ? `<div style="margin: 8px 0 0; font-size: 13px; color: var(--secondary);">📍 Currently in ${t.current_class.resource_type === 'lab' ? 'lab' : 'interactive class'} ${t.current_class.resource_name || t.current_class.resource_location || t.current_class.location || ''}</div>` : ''}
+                            ${t.timetable ? `<button class="btn-message" style="margin-top: 10px; font-size: 12px; padding: 6px 12px;" onclick="openTimetableModal(${t.id}, '${t.full_name}', ${JSON.stringify(t.timetable).replace(/"/g, '&quot;')})">📅 View Schedule</button>` : ''}
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn-message" onclick="openMessageModal(${t.id}, '${t.full_name}')">💬 Message</button>
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('teachers-list').innerHTML = html || '<p class="text-muted">No teachers found</p>';
+            } catch (error) {
+                console.error(error);
+            }
+        });
+        
+        // Message form submission
         document.getElementById('message-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             try {
@@ -475,37 +608,17 @@
                 if (response.ok) {
                     closeMessageModal();
                     alert('Message sent successfully!');
+                    loadMessages();
                 }
             } catch (error) {
                 alert('Error sending message');
             }
         });
         
-        // Load teachers on page load
-        loadTeachers();
-        
-        async function loadTeachers() {
-            try {
-                const response = await fetch('/api/student/search-teachers?q=');
-                const teachers = await response.json();
-                const html = teachers.length > 0 ? teachers.map(t => `
-                    <div class="teacher-card">
-                        <div class="teacher-info">
-                            <p class="teacher-name">${t.full_name}</p>
-                            <p class="teacher-meta">📚 ${t.subject || 'N/A'} | 🏢 ${t.department || 'N/A'}</p>
-                            <p class="teacher-meta">📍 ${t.cabin_location || 'Location not set'}</p>
-                            <span class="status-badge status-${t.status}">${t.status.replace('_', ' ').toUpperCase()}</span>
-                        </div>
-                        <div class="action-buttons">
-                            <button class="btn-message" onclick="openMessageModal(${t.id}, '${t.full_name}')">💬 Message</button>
-                        </div>
-                    </div>
-                `).join('') : '<p class="text-muted">No teachers available</p>';
-                document.getElementById('teachers-list').innerHTML = html;
-            } catch (error) {
-                console.error(error);
-            }
-        }
+        // Load initial data when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTeachers();
+        });
     </script>
 </body>
 </html>

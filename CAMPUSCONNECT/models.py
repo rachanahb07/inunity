@@ -44,7 +44,10 @@ class Student(User):
 class Teacher(User):
     """Teacher model inheriting from User"""
     subject = db.Column(db.String(120))
-    cabin_location = db.Column(db.String(255))  # Block, Floor, Room
+    cabin_location = db.Column(db.String(255))  # Legacy: full location string
+    cabin_block = db.Column(db.String(50))  # e.g., "Block A"
+    cabin_floor = db.Column(db.String(50))  # e.g., "Floor 2"
+    cabin_room = db.Column(db.String(50))  # e.g., "Room 201"
     timetable = db.Column(db.Text)  # JSON format
     status = db.Column(db.String(20), default='free')  # free, busy, away, in_class
     status_updated_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -90,6 +93,7 @@ class LabBooking(db.Model):
     end_time = db.Column(db.Time)
     status = db.Column(db.String(20), default='pending')  # pending, confirmed, engaged, cancelled
     warning_sent = db.Column(db.Boolean, default=False)
+    started_sent = db.Column(db.Boolean, default=False)
     confirmed_at = db.Column(db.DateTime)
     engaged_at = db.Column(db.DateTime)
     cancelled_at = db.Column(db.DateTime)
@@ -122,6 +126,7 @@ class InteractiveClassBooking(db.Model):
     end_time = db.Column(db.Time)
     status = db.Column(db.String(20), default='pending')  # pending, confirmed, engaged, cancelled
     warning_sent = db.Column(db.Boolean, default=False)
+    started_sent = db.Column(db.Boolean, default=False)
     confirmed_at = db.Column(db.DateTime)
     engaged_at = db.Column(db.DateTime)
     cancelled_at = db.Column(db.DateTime)
@@ -140,6 +145,18 @@ class Message(db.Model):
     reply_to_id = db.Column(db.Integer, db.ForeignKey('message.id'))
     
     replies = db.relationship('Message', backref=db.backref('original_message', remote_side=[id]), lazy=True)
+
+
+class Notification(db.Model):
+    """Notification model for teacher booking reminders"""
+    id = db.Column(db.Integer, primary_key=True)
+    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message_type = db.Column(db.String(100), nullable=False)
+    title = db.Column(db.String(255), default='')
+    body = db.Column(db.Text, nullable=False)
+    data = db.Column(db.Text)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class SystemLog(db.Model):

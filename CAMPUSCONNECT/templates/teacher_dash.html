@@ -131,6 +131,23 @@
             color: var(--accent);
             border-bottom-color: var(--accent);
         }
+
+        .notify-badge {
+            display: inline-block;
+            background: var(--danger);
+            color: white;
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-left: 6px;
+            min-width: 22px;
+            text-align: center;
+        }
+
+        .notify-badge.hidden {
+            display: none;
+        }
         
         .tab-content {
             display: none;
@@ -382,12 +399,13 @@
     <div class="container-main">
         <!-- TABS -->
         <div class="tabs">
-            <a href="javascript:switchTab('overview')" class="tab-link active">📊 Overview</a>
-            <a href="javascript:switchTab('profile')" class="tab-link">👤 Profile</a>
-            <a href="javascript:switchTab('bookings')" class="tab-link">📅 Book Lab</a>
-            <a href="javascript:switchTab('interactive')" class="tab-link">📺 Book Interactive</a>
-            <a href="javascript:switchTab('mybookings')" class="tab-link">📋 My Bookings</a>
-            <a href="javascript:switchTab('messages')" class="tab-link">💬 Messages</a>
+            <a href="#" onclick="switchTab(event, 'overview')" class="tab-link active">📊 Overview</a>
+            <a href="#" onclick="switchTab(event, 'profile')" class="tab-link">👤 Profile</a>
+            <a href="#" onclick="switchTab(event, 'bookings')" class="tab-link">📅 Book Lab</a>
+            <a href="#" onclick="switchTab(event, 'interactive')" class="tab-link">📺 Book Interactive</a>
+            <a href="#" onclick="switchTab(event, 'mybookings')" class="tab-link">📋 My Bookings</a>
+            <a href="#" onclick="switchTab(event, 'notifications')" class="tab-link">🔔 Notifications <span id="notifications-badge" class="notify-badge hidden">0</span></a>
+            <a href="#" onclick="switchTab(event, 'messages')" class="tab-link">💬 Messages</a>
         </div>
         
         <!-- OVERVIEW TAB -->
@@ -413,6 +431,9 @@
         <div id="profile" class="tab-content hidden">
             <div class="profile-card">
                 <h5 style="color: var(--primary); margin-bottom: 20px;">📝 Update Your Profile</h5>
+
+                <!-- Email change removed per admin policy -->
+
                 <form id="profile-form">
                     <div class="form-group">
                         <label class="form-label">Subject</label>
@@ -422,13 +443,41 @@
                         <label class="form-label">Department</label>
                         <input type="text" class="form-control" id="profile-department" placeholder="e.g., CSE, ECE">
                     </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label class="form-label">Cabin Block</label>
+                            <input type="text" class="form-control" id="profile-block" placeholder="e.g., Block A">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Floor</label>
+                            <input type="text" class="form-control" id="profile-floor" placeholder="e.g., Floor 2">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Room Number</label>
+                            <input type="text" class="form-control" id="profile-room" placeholder="e.g., 201">
+                        </div>
+                    </div>
                     <div class="form-group">
-                        <label class="form-label">Cabin Location</label>
-                        <input type="text" class="form-control" id="profile-location" placeholder="e.g., Block A, Floor 2, Room 201">
+                        <label class="form-label">Profile Photo</label>
+                        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px;">
+                            <img id="profile-photo-preview" src="https://via.placeholder.com/100x100?text=Photo" alt="Profile Photo" style="width:100px; height:100px; object-fit:cover; border-radius:16px; border:1px solid #e2e8f0;">
+                            <input type="file" class="form-control" id="profile-photo" accept="image/*">
+                        </div>
+                        <small style="color: var(--secondary);">Upload a teacher profile photo (JPG, PNG, GIF).</small>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Timetable (JSON format)</label>
-                        <textarea class="form-control" id="profile-timetable" rows="4" placeholder="Enter your timetable..."></textarea>
+                        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 12px; color: #666; border: 1px solid #e2e8f0;">
+                            <strong>📌 Format Example:</strong><br>
+                            <code style="display: block; margin-top: 8px; white-space: pre-wrap; background: white; padding: 8px; border-radius: 4px;">
+{
+  "monday": [{"start": "09:00", "end": "10:00", "subject": "Data Structures", "location": "Lab A"}],
+  "tuesday": [{"start": "10:00", "end": "11:00", "subject": "Algorithms", "location": "Lab B"}]
+}
+                            </code>
+                        </div>
+                        <textarea class="form-control" id="profile-timetable" rows="6" placeholder="Paste your timetable JSON here..."></textarea>
+                        <small style="color: var(--secondary); display: block; margin-top: 8px;">⏰ Days: monday-sunday. Time format: HH:MM (24h). Status auto-updates based on class schedule. Use exact lab or interactive class locations when available.</small>
                     </div>
                     <button type="submit" class="btn-primary-custom">💾 Save Changes</button>
                 </form>
@@ -491,6 +540,11 @@
             <div id="interactive-bookings-list"></div>
         </div>
         
+        <div id="notifications" class="tab-content hidden">
+            <h5 style="color: var(--primary); margin-bottom: 20px;">🔔 Booking Notifications</h5>
+            <div id="notifications-list"></div>
+        </div>
+        
         <!-- MESSAGES TAB -->
         <div id="messages" class="tab-content hidden">
             <h5 style="color: var(--primary); margin-bottom: 20px;">💬 Student Messages</h5>
@@ -511,11 +565,18 @@
         let currentBookingId = null;
         let confirmationTimer = null;
         
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(tabName).classList.remove('hidden');
+        function switchTab(event, tabName) {
+            event.preventDefault();
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('active');
+            });
+            const selectedTab = document.getElementById(tabName);
+            selectedTab.classList.remove('hidden');
+            selectedTab.classList.add('active');
             document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
+            event.currentTarget.classList.add('active');
             
             if (tabName === 'bookings') loadLabsForBooking();
             if (tabName === 'interactive') loadInteractiveClasses();
@@ -523,6 +584,7 @@
                 loadMyBookings();
                 loadTeacherInteractiveBookings();
             }
+            if (tabName === 'notifications') loadNotifications();
             if (tabName === 'messages') loadMessages();
             if (tabName === 'profile') loadProfile();
         }
@@ -553,7 +615,7 @@
                 const labs = await response.json();
                 const select = document.getElementById('lab-select');
                 select.innerHTML = '<option value="">-- Select a Lab --</option>' + 
-                    labs.map(l => `<option value="${l.id}">${l.name} (${l.location})</option>`).join('');
+                    labs.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
             } catch (error) {
                 console.error(error);
             }
@@ -565,7 +627,7 @@
                 const classes = await response.json();
                 const select = document.getElementById('interactive-select');
                 select.innerHTML = '<option value="">-- Select a Class --</option>' + 
-                    classes.map(c => `<option value="${c.id}">${c.name} (${c.location})</option>`).join('');
+                    classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
             } catch (error) {
                 console.error(error);
             }
@@ -725,12 +787,63 @@
                 const profile = await response.json();
                 document.getElementById('profile-subject').value = profile.subject || '';
                 document.getElementById('profile-department').value = profile.department || '';
-                document.getElementById('profile-location').value = profile.cabin_location || '';
-                document.getElementById('profile-timetable').value = profile.timetable || '';
+                document.getElementById('profile-block').value = profile.cabin_block || '';
+                document.getElementById('profile-floor').value = profile.cabin_floor || '';
+                document.getElementById('profile-room').value = profile.cabin_room || '';
+                
+                // Format timetable as JSON
+                if (profile.timetable) {
+                    try {
+                        const timetableObj = typeof profile.timetable === 'string' ? JSON.parse(profile.timetable) : profile.timetable;
+                        document.getElementById('profile-timetable').value = JSON.stringify(timetableObj, null, 2);
+                    } catch {
+                        document.getElementById('profile-timetable').value = profile.timetable || '';
+                    }
+                } else {
+                    document.getElementById('profile-timetable').value = '';
+                }
+                
+                // populate email input if present
+                const emailEl = document.getElementById('profile-email');
+                if (emailEl) emailEl.value = profile.email || '';
+                const photoPreview = document.getElementById('profile-photo-preview');
+                if (profile.profile_photo) {
+                    const photoUrl = `/static/${profile.profile_photo}`;
+                    photoPreview.src = photoUrl;
+                } else {
+                    photoPreview.src = 'https://via.placeholder.com/100x100?text=Photo';
+                }
             } catch (error) {
                 console.error(error);
             }
         }
+        
+        document.getElementById('profile-photo').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const photoPreview = document.getElementById('profile-photo-preview');
+            photoPreview.src = URL.createObjectURL(file);
+
+            const formData = new FormData();
+            formData.append('photo', file);
+
+            try {
+                const response = await fetch('/api/teacher/upload-photo', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    alert(result.message || 'Error uploading photo');
+                    return;
+                }
+                alert('✅ Profile photo uploaded successfully!');
+            } catch (error) {
+                console.error(error);
+                alert('Error uploading photo');
+            }
+        });
         
         // Save Profile
         document.getElementById('profile-form').addEventListener('submit', async (e) => {
@@ -742,7 +855,9 @@
                     body: JSON.stringify({
                         subject: document.getElementById('profile-subject').value,
                         department: document.getElementById('profile-department').value,
-                        cabin_location: document.getElementById('profile-location').value,
+                        cabin_block: document.getElementById('profile-block').value,
+                        cabin_floor: document.getElementById('profile-floor').value,
+                        cabin_room: document.getElementById('profile-room').value,
                         timetable: document.getElementById('profile-timetable').value
                     })
                 });
@@ -753,12 +868,18 @@
                 alert('Error updating profile');
             }
         });
+
+        // Email change disabled in UI for teachers (handled by admin only)
         
         // Booking Notification System
         function showBookingNotification(type, message, bookingId) {
-            if (type === 'warning') {
+            if (type && type.includes('warning')) {
                 showWarningNotification(message, bookingId);
-            } else if (type === 'started') {
+            } else if (type && type.includes('started')) {
+                showStartNotification(message, bookingId);
+            } else if (type && type.includes('cancelled')) {
+                showCancelNotification(message);
+            } else {
                 showStartNotification(message, bookingId);
             }
         }
@@ -767,6 +888,7 @@
             const notif = document.getElementById('booking-notification');
             notif.classList.remove('hidden');
             notif.style.display = 'block';
+            notif.classList.remove('started');
             notif.classList.add('warning');
             document.getElementById('notification-message').textContent = message;
             currentBookingId = bookingId;
@@ -785,6 +907,7 @@
             const notif = document.getElementById('booking-notification');
             notif.classList.remove('hidden');
             notif.style.display = 'block';
+            notif.classList.remove('warning');
             notif.classList.add('started');
             document.getElementById('notification-message').textContent = message;
             currentBookingId = bookingId;
@@ -801,6 +924,21 @@
                     notif.style.display = 'none';
                 }
             }, 1000);
+        }
+
+        function showCancelNotification(message) {
+            const notif = document.getElementById('booking-notification');
+            notif.classList.remove('hidden');
+            notif.style.display = 'block';
+            notif.classList.remove('warning');
+            notif.classList.add('started');
+            document.getElementById('notification-message').textContent = message;
+            document.getElementById('notification-timer').textContent = '';
+            currentBookingId = null;
+            setTimeout(() => {
+                notif.classList.add('hidden');
+                notif.style.display = 'none';
+            }, 10000);
         }
         
         async function confirmBooking() {
@@ -824,6 +962,73 @@
         // Uncomment to test notifications
         // setTimeout(() => showBookingNotification('warning', '🔔 Your lab class is about to start in 10 minutes. Please confirm the booking.', 1), 5000);
         // setTimeout(() => showBookingNotification('started', '⏰ Your lab class has started. Please confirm the lab is engaged.', 1), 20000);
+        
+        // ===== PAGE INITIALIZATION =====
+        async function renderNotifications(notifications) {
+            const list = document.getElementById('notifications-list');
+            if (!notifications || notifications.length === 0) {
+                list.innerHTML = '<p class="text-muted">No booking reminders yet</p>';
+                return;
+            }
+            list.innerHTML = notifications.map(note => `
+                <div class="booking-card" style="border-left: 4px solid var(--accent); margin-bottom: 12px;">
+                    <div class="booking-info">
+                        <p class="booking-lab">${note.title || 'Booking Reminder'}</p>
+                        <p class="booking-time">${note.message}</p>
+                        ${note.booking_id ? `<small>Booking ID: ${note.booking_id}</small>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadNotifications() {
+            try {
+                const response = await fetch('/api/teacher/notifications');
+                if (!response.ok) return;
+                const notifications = await response.json();
+                notifications.forEach(note => {
+                    showBookingNotification(note.type, note.message, note.booking_id);
+                });
+                renderNotifications(notifications);
+                updateNotificationBadge(0);
+            } catch (error) {
+                console.error('Failed to load notifications', error);
+            }
+        }
+
+        async function loadNotificationCount() {
+            try {
+                const response = await fetch('/api/teacher/notifications/count');
+                if (!response.ok) return;
+                const data = await response.json();
+                updateNotificationBadge(data.unread || 0);
+            } catch (error) {
+                console.error('Failed to load notification count', error);
+            }
+        }
+
+        function updateNotificationBadge(count) {
+            const badge = document.getElementById('notifications-badge');
+            badge.textContent = count;
+            if (count > 0) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load initial data for key tabs
+            loadLabsForBooking();
+            loadInteractiveClasses();
+            loadProfile();
+            loadMyBookings();
+            loadTeacherInteractiveBookings();
+            loadMessages();
+            loadNotifications();
+            loadNotificationCount();
+            setInterval(loadNotificationCount, 30000);
+        });
     </script>
 </body>
 </html>

@@ -157,6 +157,10 @@
             border-radius: 12px;
             border: 1px solid var(--border);
         }
+
+        .hidden {
+            display: none !important;
+        }
         
         .btn-action {
             background: var(--accent);
@@ -248,11 +252,11 @@
             <small style="color: var(--secondary);">Admin Panel</small>
         </div>
         <ul class="sidebar-menu">
-            <li><a href="javascript:showTab('dashboard')" class="menu-link active" data-tab="dashboard">📊 Dashboard</a></li>
-            <li><a href="javascript:showTab('users')" class="menu-link" data-tab="users">👥 Users</a></li>
-            <li><a href="javascript:showTab('labs')" class="menu-link" data-tab="labs">🧪 Labs</a></li>
-            <li><a href="javascript:showTab('interactive')" class="menu-link" data-tab="interactive">📺 Interactive Classes</a></li>
-            <li><a href="javascript:showTab('logs')" class="menu-link" data-tab="logs">📋 System Logs</a></li>
+            <li><a href="#" onclick="showTab(event, 'dashboard')" class="menu-link active" data-tab="dashboard">📊 Dashboard</a></li>
+            <li><a href="#" onclick="showTab(event, 'users')" class="menu-link" data-tab="users">👥 Users</a></li>
+            <li><a href="#" onclick="showTab(event, 'labs')" class="menu-link" data-tab="labs">🧪 Labs</a></li>
+            <li><a href="#" onclick="showTab(event, 'interactive')" class="menu-link" data-tab="interactive">📺 Interactive Classes</a></li>
+            <li><a href="#" onclick="showTab(event, 'logs')" class="menu-link" data-tab="logs">📋 System Logs</a></li>
             <li style="margin-top: 30px; border-top: 1px solid var(--border); padding-top: 20px;">
                 <a href="/logout" style="color: #ef4444;">🚪 Logout</a>
             </li>
@@ -290,6 +294,10 @@
                     <p class="number">{{ stats['total_labs'] }}</p>
                 </div>
                 <div class="stat-card">
+                    <h6>Total Interactive Classes</h6>
+                    <p class="number">{{ stats['total_interactive_classes'] }}</p>
+                </div>
+                <div class="stat-card">
                     <h6>Active Bookings</h6>
                     <p class="number" style="color: var(--accent);">{{ stats['active_bookings'] }}</p>
                 </div>
@@ -316,7 +324,7 @@
             </table>
         </div>
         
-        <!-- LABS TAB -->
+        <!-- LABORATORY TAB -->
         <div id="labs" class="tab-content hidden">
             <h5 style="color: var(--primary); margin-bottom: 20px;">🧪 Manage Labs</h5>
             <button class="btn-action" onclick="openLabModal()">+ Add New Lab</button>
@@ -327,10 +335,11 @@
                         <th>Location</th>
                         <th>Capacity</th>
                         <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="labs-table">
-                    <tr><td colspan="4" class="text-center text-muted">Loading...</td></tr>
+                    <tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -346,10 +355,11 @@
                         <th>Location</th>
                         <th>Capacity</th>
                         <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="interactive-table">
-                    <tr><td colspan="4" class="text-center text-muted">Loading...</td></tr>
+                    <tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -357,7 +367,24 @@
         <!-- LOGS TAB -->
         <div id="logs" class="tab-content hidden">
             <h5 style="color: var(--primary); margin-bottom: 20px;">📋 System Logs</h5>
-            <p class="text-muted">System logging enabled. All user actions are tracked.</p>
+            <div style="display:flex; gap:12px; margin-bottom:12px;">
+                <button id="export-logs-btn" class="btn-action">⬇️ Export Logs (CSV)</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Action</th>
+                            <th>User ID</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-table">
+                        <tr><td colspan="4" class="text-center text-muted">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
     
@@ -383,10 +410,52 @@
             </form>
         </div>
     </div>
+
+    <div id="interactive-modal" class="modal-form">
+        <div class="modal-content">
+            <h5>Add New Interactive Class</h5>
+            <form id="interactive-form">
+                <div class="form-group mb-3">
+                    <label class="form-label">Class Name</label>
+                    <input type="text" class="form-control" id="interactive-name" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Location</label>
+                    <input type="text" class="form-control" id="interactive-location" placeholder="Block C, Floor 1" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Capacity</label>
+                    <input type="number" class="form-control" id="interactive-capacity" value="60">
+                </div>
+                <button type="submit" class="btn-action w-100">Add Class</button>
+                <button type="button" class="btn btn-secondary w-100 mt-2" onclick="closeInteractiveModal()">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="teacher-photo-modal" class="modal-form">
+        <div class="modal-content">
+            <h5>Upload Teacher Photo</h5>
+            <form id="teacher-photo-form">
+                <input type="hidden" id="teacher-photo-id">
+                <div class="form-group mb-3">
+                    <label class="form-label">Teacher</label>
+                    <input type="text" class="form-control" id="teacher-photo-name" disabled>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Photo</label>
+                    <input type="file" class="form-control" id="teacher-photo-file" accept="image/*" required>
+                </div>
+                <button type="submit" class="btn-action w-100">Upload Photo</button>
+                <button type="button" class="btn btn-secondary w-100 mt-2" onclick="closeTeacherPhotoModal()">Cancel</button>
+            </form>
+        </div>
+    </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function showTab(tabName) {
+        function showTab(event, tabName) {
+            event.preventDefault();
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(tabName).classList.remove('hidden');
             document.querySelectorAll('.menu-link').forEach(el => el.classList.remove('active'));
@@ -395,6 +464,7 @@
             if (tabName === 'users') loadUsers();
             if (tabName === 'labs') loadLabs();
             if (tabName === 'interactive') loadInteractive();
+            if (tabName === 'logs') loadLogs();
         }
         
         async function loadUsers() {
@@ -402,16 +472,31 @@
                 const response = await fetch('/api/admin/users');
                 const users = await response.json();
                 const tbody = document.getElementById('users-table');
-                tbody.innerHTML = users.map(u => `
+                tbody.innerHTML = users.map(u => {
+                    const photoUrl = u.profile_photo_url || (u.profile_photo ? '/static/' + u.profile_photo : 'https://via.placeholder.com/60?text=No+Photo');
+                    const cabinDetail = u.role === 'teacher' ? 
+                        [
+                            u.cabin_block ? `<div class="cabin-row"><span class="cabin-label">Block:</span><span class="cabin-value">${u.cabin_block}</span></div>` : '',
+                            u.cabin_floor ? `<div class="cabin-row"><span class="cabin-label">Floor:</span><span class="cabin-value">${u.cabin_floor}</span></div>` : '',
+                            u.cabin_room ? `<div class="cabin-row"><span class="cabin-label">Room:</span><span class="cabin-value">${u.cabin_room}</span></div>` : ''
+                        ].filter(Boolean).join('') || '<span style="color: var(--secondary);">Not set</span>'
+                        : '<span style="color: var(--secondary);">N/A</span>';
+                    return `
                     <tr>
+                        <td><img src="${photoUrl}" alt="${u.full_name}" style="width:60px;height:60px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;" /></td>
                         <td>${u.email}</td>
                         <td>${u.full_name}</td>
                         <td><span class="badge" style="background: #dbeafe; color: #1e40af;">${u.role}</span></td>
+                        <td>${cabinDetail}</td>
                         <td><span class="badge ${u.is_active ? 'badge-active' : 'badge-inactive'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
                         <td>${u.created_at}</td>
-                        <td><button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Delete</button></td>
+                        <td>
+                            ${u.role === 'teacher' ? `<button class="btn btn-sm btn-primary me-1" onclick="openTeacherPhotoModal(${u.id}, '${u.full_name.replace(/'/g, "\\'")}')">Upload Photo</button>` : ''}
+                            <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Delete</button>
+                        </td>
                     </tr>
-                `).join('');
+                `;
+                }).join('');
             } catch (e) {
                 console.error(e);
             }
@@ -428,6 +513,7 @@
                         <td>${l.location}</td>
                         <td>${l.capacity}</td>
                         <td><span class="badge ${l.status === 'free' ? 'badge-active' : 'badge-inactive'}">${l.status}</span></td>
+                        <td><button class="btn btn-sm btn-danger" onclick="deleteLab(${l.id})">Remove</button></td>
                     </tr>
                 `).join('');
             } catch (e) {
@@ -446,12 +532,53 @@
                         <td>${c.location}</td>
                         <td>${c.capacity}</td>
                         <td><span class="badge ${c.status === 'free' ? 'badge-active' : 'badge-inactive'}">${c.status}</span></td>
+                        <td><button class="btn btn-sm btn-danger" onclick="deleteInteractiveClass(${c.id})">Remove</button></td>
                     </tr>
                 `).join('');
             } catch (e) {
                 console.error(e);
             }
         }
+        
+        async function loadLogs() {
+            try {
+                const response = await fetch('/api/admin/logs');
+                const logs = await response.json();
+                const tbody = document.getElementById('logs-table');
+                tbody.innerHTML = logs.map(log => `
+                    <tr>
+                        <td>${log.created_at}</td>
+                        <td>${log.action}</td>
+                        <td>${log.user_id || 'System'}</td>
+                        <td>${log.details || ''}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        document.getElementById('export-logs-btn').addEventListener('click', async () => {
+            try {
+                const resp = await fetch('/api/admin/export-logs');
+                if (!resp.ok) {
+                    alert('Failed to export logs');
+                    return;
+                }
+                const blob = await resp.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'system_logs.csv';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error(e);
+                alert('Error exporting logs');
+            }
+        });
         
         function openLabModal() {
             document.getElementById('lab-modal').classList.add('show');
@@ -460,6 +587,15 @@
         function closeLabModal() {
             document.getElementById('lab-modal').classList.remove('show');
             document.getElementById('lab-form').reset();
+        }
+        
+        function openInteractiveModal() {
+            document.getElementById('interactive-modal').classList.add('show');
+        }
+        
+        function closeInteractiveModal() {
+            document.getElementById('interactive-modal').classList.remove('show');
+            document.getElementById('interactive-form').reset();
         }
         
         document.getElementById('lab-form').addEventListener('submit', async (e) => {
@@ -493,6 +629,91 @@
                 }
             }
         }
+
+        async function deleteLab(labId) {
+            if (!confirm('Delete this lab?')) return;
+            try {
+                const response = await fetch(`/api/admin/delete-lab/${labId}`, { method: 'DELETE' });
+                if (response.ok) loadLabs();
+            } catch (e) {
+                alert('Error deleting lab');
+            }
+        }
+
+        async function deleteInteractiveClass(classId) {
+            if (!confirm('Delete this interactive class?')) return;
+            try {
+                const response = await fetch(`/api/admin/delete-interactive-class/${classId}`, { method: 'DELETE' });
+                if (response.ok) loadInteractive();
+            } catch (e) {
+                alert('Error deleting interactive class');
+            }
+        }
+
+        function openTeacherPhotoModal(teacherId, teacherName) {
+            document.getElementById('teacher-photo-id').value = teacherId;
+            document.getElementById('teacher-photo-name').value = teacherName;
+            document.getElementById('teacher-photo-file').value = null;
+            document.getElementById('teacher-photo-modal').classList.add('show');
+        }
+
+        function closeTeacherPhotoModal() {
+            document.getElementById('teacher-photo-modal').classList.remove('show');
+            document.getElementById('teacher-photo-form').reset();
+        }
+
+        document.getElementById('teacher-photo-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const teacherId = document.getElementById('teacher-photo-id').value;
+            const fileInput = document.getElementById('teacher-photo-file');
+            if (!fileInput.files[0]) {
+                alert('Please select a photo.');
+                return;
+            }
+
+            const data = new FormData();
+            data.append('photo', fileInput.files[0]);
+
+            try {
+                const response = await fetch(`/api/admin/teacher/${teacherId}/upload-photo`, {
+                    method: 'POST',
+                    body: data
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    alert(result.message || 'Error uploading teacher photo');
+                    return;
+                }
+                alert('✅ Teacher photo uploaded successfully.');
+                closeTeacherPhotoModal();
+            } catch (e) {
+                console.error(e);
+                alert('Error uploading teacher photo');
+            }
+        });
+        
+        document.getElementById('interactive-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch('/api/admin/interactive-classes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('interactive-name').value,
+                        location: document.getElementById('interactive-location').value,
+                        capacity: parseInt(document.getElementById('interactive-capacity').value, 10)
+                    })
+                });
+                if (response.ok) {
+                    closeInteractiveModal();
+                    loadInteractive();
+                } else {
+                    alert('Error adding interactive class');
+                }
+            } catch (e) {
+                alert('Error adding interactive class');
+            }
+        });
         
         // Initial load
         loadUsers();
