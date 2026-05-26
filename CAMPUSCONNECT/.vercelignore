@@ -1,0 +1,11 @@
+flask_session/
+flask_session_storage/
+__pycache__/
+.git/
+.gitignore
+*.pyc
+*.pyo
+.env
+.DS_Store
+*.db
+instance/database.db

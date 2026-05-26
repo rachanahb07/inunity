@@ -1,100 +1,23 @@
-# Python 3.14 compatibility patch
-import sys
-import typing
-if sys.version_info >= (3, 14):
-    # Patch for Python 3.14 typing compatibility
-    typing_orig_init_subclass = typing._generic_init_subclass
-    def patched_init_subclass(cls, *args, **kwargs):
-        # Remove problematic attributes before calling original
-        old_attrs = {}
-        for attr in ['__static_attributes__', '__firstlineno__']:
-            if hasattr(cls, attr):
-                old_attrs[attr] = getattr(cls, attr)
-                try:
-                    delattr(cls, attr)
-                except AttributeError:
-                    pass
-        try:
-            return typing_orig_init_subclass(cls, *args, **kwargs)
-        except AssertionError:
-            # Restore attributes if needed
-            for attr, val in old_attrs.items():
-                try:
-                    setattr(cls, attr, val)
-                except:
-                    pass
-            raise
-    typing._generic_init_subclass = patched_init_subclass
-
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, Response
-import os
-# Ensure site-packages is preferred on sys.path so installed packages aren't shadowed
-import site
-try:
-    site_pkgs = site.getsitepackages()
-except Exception:
-    site_pkgs = []
-for sp in site_pkgs:
-    if os.path.isdir(sp) and sp not in sys.path:
-        sys.path.insert(0, sp)
-        break
-# Import Session; handle local-folder shadowing of package by trying a site-packages fallback
-try:
-    from flask_session import Session
-    # If the imported module is local (folder in project), prefer installed package
-    try:
-        _fs_mod = __import__('flask_session')
-        _fs_file = getattr(_fs_mod, '__file__', '') or ''
-        if 'flask_session' in _fs_file and ('CAMPUSCONNECT' in _fs_file or 'flask_session' in _fs_file.split(os.sep)[0]):
-            raise ImportError('Local flask_session detected; using fallback')
-    except Exception:
-        pass
-except Exception:
-    import importlib, site
-    Session = None
-    # Try to find flask_session inside site-packages and load it explicitly
-    try:
-        site_paths = []
-        try:
-            site_paths.extend(site.getsitepackages())
-        except Exception:
-            pass
-        try:
-            site_paths.append(site.getusersitepackages())
-        except Exception:
-            pass
-        for sp in site_paths:
-            candidate = os.path.join(sp, 'flask_session')
-            if os.path.isdir(candidate):
-                try:
-                    spec = importlib.util.spec_from_file_location('flask_session', os.path.join(candidate, '__init__.py'))
-                    mod = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(mod)
-                    Session = getattr(mod, 'Session', None)
-                    break
-                except Exception:
-                    continue
-    except Exception:
-        Session = None
-    if Session is None:
-        raise ImportError("flask_session import failed: a local 'flask_session' directory in the project is shadowing the installed Flask-Session package. Please rename or remove the local folder 'flask_session' so the installed package can be imported.")
 from functools import wraps
 from datetime import datetime, timedelta, date, time
 from sqlalchemy import inspect, text, or_
 from werkzeug.utils import secure_filename
 import os
 import json
+import secrets
+
 from models import db, User, Student, Teacher, Lab, LabBooking, InteractiveClass, InteractiveClassBooking, Message, Notification, SystemLog
 from tasks import start_scheduler
-import secrets
 
 app = Flask(__name__, instance_relative_config=True)
 
-# Ensure instance folder exists and use a fixed SQLite file there
-os.makedirs(app.instance_path, exist_ok=True)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'database.db')
+# Database configuration - compatible with Vercel
+db_path = os.environ.get('DATABASE_PATH') or os.path.join(app.instance_path, 'database.db')
+os.makedirs(os.path.dirname(db_path) if os.path.dirname(db_path) else '.', exist_ok=True)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = secrets.token_hex(32)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
@@ -103,10 +26,17 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Initialize extensions
 db.init_app(app)
-Session(app)
 
-# Start APScheduler
-start_scheduler(app)
+# Simple session configuration for Vercel
+try:
+    from flask_session import Session
+    Session(app)
+except ImportError:
+    pass
+
+# Start APScheduler (only in non-serverless environments)
+if os.environ.get('FLASK_ENV') != 'production':
+    start_scheduler(app)
 
 
 # ============= AUTHENTICATION DECORATORS =============
@@ -1120,6 +1050,16 @@ def init_db():
             db.session.add_all([lab1, lab2, ic1])
             db.session.commit()
             print("Sample data added! Admin and teacher accounts created.")
+
+@app.before_request
+def init_db_if_needed():
+    """Auto-initialize database on first request (for Vercel)"""
+    with app.app_context():
+        try:
+            db.session.execute(text('SELECT 1'))
+        except Exception:
+            db.create_all()
+            print("Database auto-initialized")
 
 
 def ensure_db_schema():
