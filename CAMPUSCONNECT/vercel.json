@@ -1,21 +1,15 @@
 {
-  "buildCommand": "pip install -r requirements.txt",
-  "devCommand": "python -m flask --app api.app run --debug",
-  "env": {
-    "FLASK_APP": "api/app.py",
-    "PYTHONUNBUFFERED": "1"
-  },
-  "functions": {
-    "api/app.py": {
-      "runtime": "python3.11",
-      "memory": 3008,
-      "maxDuration": 60
+  "version": 2,
+  "builds": [
+    {
+      "src": "app.py",
+      "use": "@vercel/python"
     }
-  },
+  ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "api/app.py"
+      "dest": "app.py"
     }
   ]
 }

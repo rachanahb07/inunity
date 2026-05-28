@@ -34,8 +34,9 @@ try:
 except ImportError:
     pass
 
-# Start APScheduler (only in non-serverless environments)
-if os.environ.get('FLASK_ENV') != 'production':
+# Start APScheduler only for local development, not in serverless deployments.
+serverless_env = bool(os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'))
+if not serverless_env and os.environ.get('FLASK_ENV') != 'production':
     start_scheduler(app)
 
 

@@ -1,0 +1,8 @@
+Flask
+gunicorn
+Werkzeug
+Flask-SQLAlchemy
+SQLAlchemy
+Flask-Session
+APScheduler
+python-dateutil
