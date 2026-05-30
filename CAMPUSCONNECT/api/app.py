@@ -677,9 +677,10 @@ def server_error(e):
     return jsonify({'error': 'Server error'}), 500
 
 
-# Vercel handler
-def handler(event, context):
-    return app(event, context)
+# Vercel: expose the WSGI app directly — no handler wrapper needed.
+# @vercel/python finds the `app` variable automatically.
+with app.app_context():
+    ensure_db_schema()
 
 
 if __name__ == '__main__':

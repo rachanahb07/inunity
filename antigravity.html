@@ -48,7 +48,6 @@
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
-    -webkit-text-fill-color: transparent;
     white-space: nowrap;
   }
 
@@ -95,14 +94,18 @@
   input[type=range]::-webkit-slider-thumb {
     appearance: none;
     -webkit-appearance: none;
-    width: 18px; height: 18px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
     background: #fff;
     box-shadow: 0 0 10px #38cfff, 0 0 20px #a78bfa;
     cursor: grab;
     transition: box-shadow .2s;
   }
-  input[type=range]::-webkit-slider-thumb:active { cursor: grabbing; box-shadow: 0 0 16px #38cfff, 0 0 30px #a78bfa; }
+  input[type=range]::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    box-shadow: 0 0 16px #38cfff, 0 0 30px #a78bfa;
+  }
 
   #grav-value {
     font-size: 0.75rem;
