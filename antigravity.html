@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anti-Gravity Lab | Zero-G Physics Simulation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: #050a14;
+    color: #e0e8ff;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    user-select: none;
+  }
+
+  #canvas {
+    position: absolute;
+    top: 0; left: 0;
+    cursor: crosshair;
+  }
+
+  /* ── HUD ── */
+  #hud {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    background: rgba(5,10,20,0.7);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(100,180,255,0.12);
+    z-index: 10;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    font-size: 1.2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #38cfff, #a78bfa);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    white-space: nowrap;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .ctrl-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: rgba(160,200,255,0.7);
+  }
+
+  /* Gravity slider */
+  #grav-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .grav-end { font-size: 0.68rem; color: #a78bfa; font-weight: 600; }
+
+  input[type=range] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 180px;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #a78bfa, #38cfff);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 10px #38cfff, 0 0 20px #a78bfa;
+    cursor: grab;
+    transition: box-shadow .2s;
+  }
+  input[type=range]::-webkit-slider-thumb:active { cursor: grabbing; box-shadow: 0 0 16px #38cfff, 0 0 30px #a78bfa; }
+
+  #grav-value {
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 56px;
+    text-align: center;
+    color: #38cfff;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(100,180,255,0.25);
+    background: rgba(56,207,255,0.08);
+    color: #38cfff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: rgba(56,207,255,0.18); box-shadow: 0 0 12px rgba(56,207,255,0.3); }
+  .btn.active { background: rgba(167,139,250,0.25); border-color: #a78bfa; color: #a78bfa; }
+
+  /* Mode buttons */
+  #mode-btns { display: flex; gap: 6px; }
+
+  /* Stats */
+  #stats {
+    font-size: 0.68rem;
+    color: rgba(160,200,255,0.6);
+    display: flex;
+    gap: 14px;
+  }
+  #stats span { white-space: nowrap; }
+  #stats b { color: #38cfff; }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(5,10,20,0.8);
+    border: 1px solid rgba(56,207,255,0.2);
+    border-radius: 12px;
+    padding: 10px 20px;
+    font-size: 0.75rem;
+    color: rgba(160,200,255,0.8);
+    backdrop-filter: blur(10px);
+    pointer-events: none;
+    z-index: 10;
+    text-align: center;
+  }
+
+  /* Gravity mode indicator */
+  #grav-mode {
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid;
+    transition: all .3s;
+  }
+  #grav-mode.anti { background: rgba(167,139,250,0.15); border-color: #a78bfa; color: #a78bfa; }
+  #grav-mode.zero  { background: rgba(56,207,255,0.15); border-color: #38cfff; color: #38cfff; }
+  #grav-mode.normal { background: rgba(255,150,50,0.15); border-color: #ff9632; color: #ff9632; }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="logo">⚛ Anti-Gravity Lab</div>
+
+  <div class="controls">
+    <!-- Gravity Slider -->
+    <div class="ctrl-group">
+      <span class="ctrl-label">Gravity Force</span>
+      <div id="grav-wrap">
+        <span class="grav-end">▲ Anti</span>
+        <input type="range" id="grav-slider" min="-100" max="100" value="-60" step="1">
+        <span class="grav-end">▼ Normal</span>
+      </div>
+      <span id="grav-value">-5.88 m/s²</span>
+    </div>
+
+    <!-- Quick presets -->
+    <div class="ctrl-group">
+      <span class="ctrl-label">Preset</span>
+      <div id="mode-btns">
+        <button class="btn" id="btn-anti" onclick="setGravity(-100)">Anti-G</button>
+        <button class="btn" id="btn-zero" onclick="setGravity(0)">Zero-G</button>
+        <button class="btn" id="btn-norm" onclick="setGravity(100)">Normal</button>
+      </div>
+    </div>
+
+    <!-- Spawn -->
+    <div class="ctrl-group">
+      <span class="ctrl-label">Spawn</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn" onclick="spawnBall()">+ Ball</button>
+        <button class="btn" onclick="spawnMany()">Burst!</button>
+        <button class="btn" onclick="clearAll()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Gravity mode badge -->
+    <div class="ctrl-group">
+      <span class="ctrl-label">Mode</span>
+      <div id="grav-mode" class="anti">ANTI-GRAVITY</div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div id="stats">
+    <span>Objects: <b id="stat-obj">0</b></span>
+    <span>Particles: <b id="stat-part">0</b></span>
+    <span>G: <b id="stat-g">-5.88</b> m/s²</span>
+  </div>
+</div>
+
+<div id="tooltip">🖱 Click & drag to toss objects &nbsp;|&nbsp; Hold to grab &nbsp;|&nbsp; Scroll to spawn</div>
+
+<script>
+// ════════════════════════════════
+//  CANVAS SETUP
+// ════════════════════════════════
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ════════════════════════════════
+//  PHYSICS CONFIG
+// ════════════════════════════════
+let GRAVITY   = -5.88;   // m/s² (negative = upward)
+const DRAG    = 0.985;   // per-frame velocity damping
+const BOUNCE  = 0.55;
+const PX_M    = 80;      // pixels per meter
+const FPS_CAP = 60;
+
+// ════════════════════════════════
+//  COLORS
+// ════════════════════════════════
+const PALETTES = [
+  ['#38cfff','#0af'],
+  ['#a78bfa','#7c3aed'],
+  ['#f472b6','#ec4899'],
+  ['#34d399','#059669'],
+  ['#fbbf24','#f59e0b'],
+  ['#fb7185','#e11d48'],
+  ['#60a5fa','#2563eb'],
+];
+
+function randPalette() { return PALETTES[Math.floor(Math.random()*PALETTES.length)]; }
+function randBetween(a,b){ return a + Math.random()*(b-a); }
+
+// ════════════════════════════════
+//  OBJECTS
+// ════════════════════════════════
+const objects   = [];
+const particles = [];
+let nextId = 0;
+
+class PhysicsObject {
+  constructor(x, y, r, palette) {
+    this.id  = nextId++;
+    this.x   = x;  this.y  = y;
+    this.vx  = randBetween(-1,1);
+    this.vy  = randBetween(-2,0.5);
+    this.r   = r || randBetween(14, 30);
+    this.palette = palette || randPalette();
+    this.spin    = randBetween(-3, 3);
+    this.angle   = 0;
+    this.trail   = [];
+    this.grabbed = false;
+    this.glowPhase = Math.random() * Math.PI * 2;
+  }
+
+  update(dt) {
+    if (this.grabbed) return;
+
+    // Apply gravity
+    this.vy += (GRAVITY * PX_M) * dt;
+
+    // Drag
+    this.vx *= Math.pow(DRAG, dt * 60);
+    this.vy *= Math.pow(DRAG, dt * 60);
+
+    this.x += this.vx * dt * PX_M;
+    this.y += this.vy * dt * PX_M;
+    this.angle += this.spin * dt;
+
+    // Boundary collisions
+    const top    = 70 + this.r;
+    const bottom = H - this.r;
+    const left   = this.r;
+    const right  = W - this.r;
+
+    if (this.x < left)  { this.x = left;  this.vx = Math.abs(this.vx) * BOUNCE; }
+    if (this.x > right) { this.x = right; this.vx = -Math.abs(this.vx) * BOUNCE; }
+    if (this.y < top)   { this.y = top;   this.vy = Math.abs(this.vy) * BOUNCE; }
+    if (this.y > bottom){ this.y = bottom; this.vy = -Math.abs(this.vy) * BOUNCE; }
+
+    // Trail
+    this.trail.push({x:this.x, y:this.y, age:0});
+    if (this.trail.length > 22) this.trail.shift();
+    this.trail.forEach(p => p.age++);
+
+    // Emit particles
+    if (Math.random() < 0.35) {
+      emitParticle(this.x + randBetween(-this.r,this.r)*0.4,
+                   this.y + randBetween(-this.r,this.r)*0.4,
+                   this.palette[0]);
+    }
+
+    this.glowPhase += dt * 3;
+  }
+
+  draw() {
+    // Trail
+    for (let i = 0; i < this.trail.length; i++) {
+      const t   = this.trail[i];
+      const alpha = (i / this.trail.length) * 0.35;
+      const size  = this.r * (i / this.trail.length) * 0.6;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, Math.max(1,size), 0, Math.PI*2);
+      ctx.fillStyle = this.palette[0] + Math.floor(alpha*255).toString(16).padStart(2,'0');
+      ctx.fill();
+    }
+
+    const glow = 0.7 + 0.3 * Math.sin(this.glowPhase);
+
+    // Outer glow
+    const og = ctx.createRadialGradient(this.x, this.y, this.r*0.5, this.x, this.y, this.r*2.2);
+    og.addColorStop(0, this.palette[0] + '55');
+    og.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r * 2.2, 0, Math.PI*2);
+    ctx.fillStyle = og;
+    ctx.fill();
+
+    // Ball body
+    const g = ctx.createRadialGradient(this.x - this.r*0.3, this.y - this.r*0.3, this.r*0.1,
+                                        this.x, this.y, this.r);
+    g.addColorStop(0, '#fff');
+    g.addColorStop(0.25, this.palette[0]);
+    g.addColorStop(1, this.palette[1]);
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    ctx.beginPath();
+    ctx.arc(0, 0, this.r, 0, Math.PI*2);
+    ctx.fillStyle = g;
+    ctx.shadowBlur = 20 * glow;
+    ctx.shadowColor = this.palette[0];
+    ctx.fill();
+
+    // Shine
+    ctx.beginPath();
+    ctx.arc(-this.r*0.28, -this.r*0.28, this.r*0.28, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.shadowBlur = 0;
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ════════════════════════════════
+//  PARTICLE SYSTEM
+// ════════════════════════════════
+class Particle {
+  constructor(x,y,color) {
+    this.x = x; this.y = y;
+    this.vx = randBetween(-60,60);
+    this.vy = randBetween(-60,60);
+    this.life = 1.0;
+    this.decay = randBetween(0.018, 0.045);
+    this.size  = randBetween(1.5, 4);
+    this.color = color;
+    // Zero-G swirl
+    this.swirl = randBetween(-1,1);
+  }
+  update(dt) {
+    // Swirling motion + partial gravity
+    const swirl = this.swirl * 80;
+    this.vx += (-this.vy * 0.01 + swirl * dt);
+    this.vy += (this.vx * 0.005 + (GRAVITY * PX_M * 0.15) * dt);
+    this.vx *= 0.96; this.vy *= 0.96;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.life -= this.decay;
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI*2);
+    const alpha = Math.floor(this.life * 220).toString(16).padStart(2,'0');
+    ctx.fillStyle = this.color + alpha;
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = this.color;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+}
+
+function emitParticle(x,y,color) {
+  if (particles.length < 1200) particles.push(new Particle(x,y,color));
+}
+
+// ════════════════════════════════
+//  BACKGROUND STARS
+// ════════════════════════════════
+const stars = Array.from({length:120}, () => ({
+  x: Math.random(), y: Math.random(),
+  r: Math.random()*1.5+0.3,
+  twinkle: Math.random()*Math.PI*2,
+  speed: randBetween(0.5,2)
+}));
+
+function drawBackground() {
+  ctx.fillStyle = '#050a14';
+  ctx.fillRect(0,0,W,H);
+
+  stars.forEach(s => {
+    s.twinkle += 0.02 * s.speed;
+    const alpha = 0.3 + 0.4*Math.sin(s.twinkle);
+    ctx.beginPath();
+    ctx.arc(s.x*W, s.y*H, s.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(180,210,255,${alpha})`;
+    ctx.fill();
+  });
+
+  // Nebula glow
+  const nb = ctx.createRadialGradient(W*0.3, H*0.4, 0, W*0.3, H*0.4, W*0.5);
+  nb.addColorStop(0, 'rgba(100,50,200,0.06)');
+  nb.addColorStop(1, 'transparent');
+  ctx.fillStyle = nb;
+  ctx.fillRect(0,0,W,H);
+
+  const nb2 = ctx.createRadialGradient(W*0.75, H*0.65, 0, W*0.75, H*0.65, W*0.4);
+  nb2.addColorStop(0, 'rgba(20,150,200,0.05)');
+  nb2.addColorStop(1, 'transparent');
+  ctx.fillStyle = nb2;
+  ctx.fillRect(0,0,W,H);
+}
+
+// ════════════════════════════════
+//  COLLISION (objects vs objects)
+// ════════════════════════════════
+function resolveCollisions() {
+  for (let i = 0; i < objects.length; i++) {
+    for (let j = i+1; j < objects.length; j++) {
+      const a = objects[i], b = objects[j];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const minD = a.r + b.r;
+      if (dist < minD && dist > 0.01) {
+        const nx = dx/dist, ny = dy/dist;
+        const overlap = minD - dist;
+        a.x -= nx * overlap * 0.5;
+        a.y -= ny * overlap * 0.5;
+        b.x += nx * overlap * 0.5;
+        b.y += ny * overlap * 0.5;
+
+        const dvx = b.vx - a.vx, dvy = b.vy - a.vy;
+        const dot  = dvx*nx + dvy*ny;
+        if (dot < 0) {
+          const impulse = dot * (1 + BOUNCE) * 0.5;
+          a.vx += impulse * nx;
+          a.vy += impulse * ny;
+          b.vx -= impulse * nx;
+          b.vy -= impulse * ny;
+
+          // Burst particles at collision
+          for (let k=0;k<5;k++) emitParticle(
+            (a.x+b.x)/2 + randBetween(-5,5),
+            (a.y+b.y)/2 + randBetween(-5,5),
+            a.palette[0]);
+        }
+      }
+    }
+  }
+}
+
+// ════════════════════════════════
+//  MOUSE / TOUCH INTERACTION
+// ════════════════════════════════
+let mouse = {x:W/2, y:H/2, down:false, dragging:null, ox:0, oy:0};
+let prevMouse = {x:0, y:0, t:0};
+let throwVel  = {x:0, y:0};
+
+function getPos(e) {
+  const r = canvas.getBoundingClientRect();
+  if (e.touches) return {x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top};
+  return {x: e.clientX - r.left, y: e.clientY - r.top};
+}
+
+canvas.addEventListener('mousedown', onDown);
+canvas.addEventListener('touchstart', onDown, {passive:true});
+canvas.addEventListener('mousemove', onMove);
+canvas.addEventListener('touchmove', onMove, {passive:true});
+canvas.addEventListener('mouseup', onUp);
+canvas.addEventListener('touchend', onUp);
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const pos = {x: mouse.x, y: mouse.y};
+  spawnAt(pos.x, pos.y);
+}, {passive:false});
+
+function onDown(e) {
+  const pos = getPos(e);
+  mouse.x = pos.x; mouse.y = pos.y;
+  mouse.down = true;
+  prevMouse = {x:pos.x, y:pos.y, t: performance.now()};
+  throwVel = {x:0,y:0};
+
+  // Find grabbed object
+  for (let i = objects.length-1; i >= 0; i--) {
+    const o = objects[i];
+    const dx = pos.x - o.x, dy = pos.y - o.y;
+    if (dx*dx + dy*dy < (o.r+8)*(o.r+8)) {
+      mouse.dragging = o;
+      o.grabbed = true;
+      mouse.ox = dx; mouse.oy = dy;
+      return;
+    }
+  }
+  // Spawn on empty click
+  spawnAt(pos.x, pos.y);
+}
+
+function onMove(e) {
+  const pos = getPos(e);
+  const now = performance.now();
+  const dt  = (now - prevMouse.t) / 1000;
+
+  if (dt > 0.001) {
+    throwVel.x = (pos.x - prevMouse.x) / dt;
+    throwVel.y = (pos.y - prevMouse.y) / dt;
+  }
+
+  prevMouse = {x:pos.x, y:pos.y, t:now};
+  mouse.x = pos.x; mouse.y = pos.y;
+
+  if (mouse.dragging) {
+    mouse.dragging.x = pos.x - mouse.ox;
+    mouse.dragging.y = pos.y - mouse.oy;
+  }
+}
+
+function onUp() {
+  if (mouse.dragging) {
+    mouse.dragging.grabbed = false;
+    mouse.dragging.vx = throwVel.x / PX_M;
+    mouse.dragging.vy = throwVel.y / PX_M;
+    mouse.dragging.spin = (throwVel.x + throwVel.y) * 0.003;
+    mouse.dragging = null;
+  }
+  mouse.down = false;
+}
+
+// ════════════════════════════════
+//  SPAWN HELPERS
+// ════════════════════════════════
+function spawnAt(x, y, r, palette) {
+  if (objects.length >= 60) objects.shift();
+  objects.push(new PhysicsObject(x, y, r, palette));
+  for (let i=0;i<10;i++) emitParticle(x + randBetween(-10,10), y + randBetween(-10,10),
+    (palette||randPalette())[0]);
+}
+
+function spawnBall() {
+  spawnAt(randBetween(80, W-80), randBetween(100, H-80));
+}
+
+function spawnMany() {
+  const cx = W/2, cy = H/2;
+  const pal = randPalette();
+  for (let i=0;i<12;i++) {
+    const angle = (i/12)*Math.PI*2;
+    const r2 = randBetween(30,120);
+    setTimeout(() => {
+      const obj = new PhysicsObject(cx + Math.cos(angle)*r2, cy + Math.sin(angle)*r2, randBetween(12,22), pal);
+      obj.vx = Math.cos(angle)*2; obj.vy = Math.sin(angle)*2;
+      objects.push(obj);
+    }, i*60);
+  }
+}
+
+function clearAll() {
+  objects.length = 0;
+  particles.length = 0;
+}
+
+// ════════════════════════════════
+//  GRAVITY CONTROLS
+// ════════════════════════════════
+const slider   = document.getElementById('grav-slider');
+const gravVal  = document.getElementById('grav-value');
+const gravMode = document.getElementById('grav-mode');
+const statG    = document.getElementById('stat-g');
+
+function setGravity(pct) {
+  slider.value = pct;
+  updateGravity();
+}
+
+function updateGravity() {
+  const pct = parseFloat(slider.value);
+  GRAVITY = (pct / 100) * 9.8;  // -9.8 to +9.8
+  const label = GRAVITY.toFixed(2);
+  gravVal.textContent = label + ' m/s²';
+  statG.textContent   = label;
+
+  if (pct < -10) {
+    gravMode.className = 'anti';
+    gravMode.textContent = '⬆ ANTI-GRAVITY';
+  } else if (pct > 10) {
+    gravMode.className = 'normal';
+    gravMode.textContent = '⬇ NORMAL GRAVITY';
+  } else {
+    gravMode.className = 'zero';
+    gravMode.textContent = '⬤ ZERO-G';
+  }
+}
+
+slider.addEventListener('input', updateGravity);
+updateGravity();
+
+// ════════════════════════════════
+//  GAME LOOP
+// ════════════════════════════════
+let lastTime = 0;
+
+function loop(ts) {
+  requestAnimationFrame(loop);
+  const dt = Math.min((ts - lastTime)/1000, 0.05);
+  lastTime = ts;
+
+  drawBackground();
+
+  // Update + draw particles first (behind objects)
+  for (let i = particles.length-1; i >= 0; i--) {
+    particles[i].update(dt);
+    if (particles[i].life <= 0) { particles.splice(i,1); continue; }
+    particles[i].draw();
+  }
+
+  resolveCollisions();
+
+  objects.forEach(o => o.update(dt));
+  objects.forEach(o => o.draw());
+
+  // Draw drag line
+  if (mouse.dragging) {
+    ctx.beginPath();
+    ctx.arc(mouse.x, mouse.y, 12, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(56,207,255,0.5)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // Update stats
+  document.getElementById('stat-obj').textContent  = objects.length;
+  document.getElementById('stat-part').textContent = particles.length;
+}
+
+// ════════════════════════════════
+//  INIT
+// ════════════════════════════════
+
+// Spawn initial objects
+for (let i = 0; i < 8; i++) {
+  setTimeout(() => spawnBall(), i * 200);
+}
+
+requestAnimationFrame(ts => { lastTime = ts; requestAnimationFrame(loop); });
+</script>
+</body>
+</html>

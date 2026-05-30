@@ -1083,10 +1083,10 @@ def ensure_db_schema():
         if 'started_sent' not in interactive_columns:
             db.session.execute(text('ALTER TABLE interactive_class_booking ADD COLUMN started_sent BOOLEAN DEFAULT 0'))
             db.session.commit()
-
+app.debug = False
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         ensure_db_schema()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run( host='0.0.0.0', port=5000)
